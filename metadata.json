@@ -1,0 +1,5 @@
+{
+  "name": "Offline Contacts App",
+  "description": "A simple and fast phone contacts application built with HTML, CSS, and JavaScript. It works completely offline and doesn't require a server or any build steps.",
+  "requestFramePermissions": []
+}
