@@ -6,7 +6,7 @@
 
 This contains everything you need to run your app locally.
 
-View your app in AI Studio: https://aymenbakkour.github.io/Phone-Contacts/index.html
+View your app in AI Studio: https://amn0262.github.io/Phone-Contacts/index.html
 ## Run Locally
 
 **Prerequisites:**  Node.js
