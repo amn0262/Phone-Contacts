@@ -1,662 +1,796 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Phone Contacts</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warehouse Command Center</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#0f1115',
+                        panel: '#181b21',
+                        accent: '#e63946',
+                        textMain: '#f1f5f9',
+                        textMuted: '#94a3b8'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://unpkg.com/dexie@latest/dist/dexie.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <style>
-        /* Basic Reset & Font */
-        :root {
-            --color-indigo-600: #4f46e5;
-            --color-indigo-700: #4338ca;
-            --color-indigo-500: #6366f1;
-            --color-indigo-800: #3730a3;
-            --color-indigo-200: #c7d2fe;
-            --color-indigo-50: #eef2ff;
-            --color-red-600: #dc2626;
-            --color-red-700: #b91c1c;
-            --color-gray-100: #f3f4f6;
-            --color-gray-200: #e5e7eb;
-            --color-gray-300: #d1d5db;
-            --color-gray-400: #9ca3af;
-            --color-gray-500: #6b7280;
-            --color-gray-700: #374151;
-            --color-gray-800: #1f2937;
-        }
-
-        body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background-color: var(--color-gray-100);
-            color: var(--color-gray-800);
-        }
-
-        /* Layout */
-        .app-container {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
-        }
-
-        .main-content {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-        }
-
-        .sidebar {
-            width: 33.33%;
-            max-width: 320px;
-            background-color: white;
-            border-right: 1px solid var(--color-gray-200);
-            overflow-y: auto;
-        }
-
-        .content-area {
-            flex: 1;
-            padding: 2rem;
-            overflow-y: auto;
-        }
-
-        /* Header */
-        .header {
-            background-color: white;
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            padding: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            z-index: 10;
-        }
-
-        .header .logo {
-            display: flex;
-            align-items: center;
-        }
-
-        .header .logo h1 {
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin: 0 0 0 0.75rem;
-        }
-
-        .header .actions {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .search-container {
-            position: relative;
-        }
-
-        .search-input {
-            padding: 0.5rem 1rem 0.5rem 2.5rem;
-            border: 1px solid var(--color-gray-300);
-            border-radius: 9999px;
-            width: 256px;
-            transition: all 0.2s;
-        }
-        .search-input:focus {
-            outline: none;
-            box-shadow: 0 0 0 2px var(--color-indigo-500);
-        }
-
-        .search-icon {
-            position: absolute;
-            left: 0.75rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--color-gray-400);
-        }
-
-        .add-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 2.5rem;
-            height: 2.5rem;
-            background-color: var(--color-indigo-600);
-            color: white;
-            border-radius: 9999px;
-            border: none;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .add-btn:hover {
-            background-color: var(--color-indigo-700);
-        }
-
-        /* Contact List */
-        .contact-list {
-            padding: 0.5rem 0;
-            list-style: none;
-            margin: 0;
-        }
-        .contact-list-item {
-            display: flex;
-            align-items: center;
-            padding: 0.75rem 1rem;
-            cursor: pointer;
-            transition: background-color 0.15s ease-in-out;
-            border-left: 4px solid transparent;
-        }
-        .contact-list-item:hover {
-            background-color: var(--color-gray-100);
-        }
-        .contact-list-item.selected {
-            background-color: var(--color-indigo-50);
-            border-left-color: var(--color-indigo-500);
-        }
-        .contact-list-item .info {
-            margin-left: 1rem;
-        }
-        .contact-list-item .name {
-            font-weight: 600;
-        }
-        .contact-list-item.selected .name {
-            color: var(--color-indigo-800);
-        }
-        .contact-list-item .email {
-            font-size: 0.875rem;
-            color: var(--color-gray-500);
-        }
-         .contact-list-item.selected .email {
-            color: var(--color-indigo-600);
-        }
-
-        /* Avatar */
-        .avatar {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 9999px;
-            color: white;
-            font-weight: bold;
-        }
-
-        /* Contact Details & Form */
-        .card {
-            background-color: white;
-            border-radius: 0.75rem;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
-            padding: 2rem;
-            animation: fade-in 0.3s ease-out;
-        }
+        body { background-color: #0f1115; color: #f1f5f9; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        .glass-panel { background: rgba(24, 27, 33, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
+        .smooth-transition { transition: all 0.3s ease; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f1115; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #e63946; }
         
-        .details-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .details-container h2 {
-            font-size: 1.875rem;
-            font-weight: bold;
-            margin-top: 1.5rem;
-        }
-        .details-info-section {
-            width: 100%;
-            margin-top: 2rem;
-            border-top: 1px solid var(--color-gray-200);
-            padding-top: 1.5rem;
-        }
-        .details-info-item {
-            display: flex;
-            align-items: center;
-            color: var(--color-gray-700);
-            margin-bottom: 1rem;
-        }
-        .details-info-item svg {
-            margin-right: 1rem;
-            color: var(--color-indigo-500);
-        }
-        .details-actions {
-            display: flex;
-            gap: 1rem;
-            margin-top: 2rem;
-        }
-
-        /* Form */
-        .form-title {
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin-bottom: 1.5rem;
-        }
-        .form-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-        }
-        .form-field {
-            margin-bottom: 1.5rem;
-        }
-        .form-field label {
-            display: block;
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: var(--color-gray-700);
-            margin-bottom: 0.25rem;
-        }
-        .form-input {
-            width: 100%;
-            box-sizing: border-box;
-            padding: 0.5rem 0.75rem;
-            border: 1px solid var(--color-gray-300);
-            border-radius: 0.375rem;
-            box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);
-        }
-        .form-input:focus {
-             outline: none;
-             box-shadow: 0 0 0 2px var(--color-indigo-500);
-        }
-        .form-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 1rem;
-            padding-top: 1rem;
-        }
+        #sidebar { transition: transform 0.3s ease-in-out; }
+        .sidebar-open { transform: translateX(0) !important; }
         
-        /* Buttons */
-        .btn {
-            display: flex;
-            align-items: center;
-            padding: 0.5rem 1rem;
-            border-radius: 0.375rem;
-            border: none;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            font-weight: 500;
-        }
-        .btn svg {
-            margin-right: 0.5rem;
-        }
-        .btn-primary {
-            background-color: var(--color-indigo-600);
-            color: white;
-        }
-        .btn-primary:hover {
-            background-color: var(--color-indigo-700);
-        }
-        .btn-danger {
-            background-color: var(--color-red-600);
-            color: white;
-        }
-        .btn-danger:hover {
-            background-color: var(--color-red-700);
-        }
-        .btn-secondary {
-            background-color: var(--color-gray-200);
-            color: var(--color-gray-800);
-        }
-        .btn-secondary:hover {
-            background-color: var(--color-gray-300);
-        }
-
-        /* Placeholder */
-        .placeholder {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            text-align: center;
-            color: var(--color-gray-500);
-        }
-        .placeholder svg {
-            width: 6rem;
-            height: 6rem;
-            margin-bottom: 1rem;
-            color: var(--color-gray-300);
-        }
-        .placeholder h2 {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin: 0;
-        }
-        .placeholder p {
-            margin-top: 0.5rem;
-        }
-        .placeholder .btn {
-            margin-top: 1.5rem;
-        }
-
-        /* Utility & Animations */
-        @keyframes fade-in {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .icon-sm { width: 1.25rem; height: 1.25rem; }
-        .icon-md { width: 1.5rem; height: 1.5rem; }
-        .icon-lg { width: 1.75rem; height: 1.75rem; }
-
-        @media (max-width: 768px) {
-            .sidebar {
-                width: 40%;
-            }
-            .content-area {
-                padding: 1rem;
-            }
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
-            .search-input {
-                width: 150px;
-            }
-        }
+        .fade-in { animation: fadeIn 0.3s forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
-<link rel="stylesheet" href="/index.css">
 </head>
-<body>
+<body class="h-screen flex overflow-hidden selection:bg-accent selection:text-white">
 
-    <div id="app" class="app-container">
-        <header class="header">
-            <div class="logo">
-                <svg class="icon-lg" style="color: var(--color-indigo-600);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.653-.124-1.282-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.653.124-1.282.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                <h1>Contacts</h1>
-            </div>
-            <div class="actions">
-                <div class="search-container">
-                     <span class="search-icon">
-                        <svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                    </span>
-                    <input type="text" id="search-input" placeholder="Search contacts..." class="search-input" />
+    <!-- Mobile Header -->
+    <div class="md:hidden fixed top-0 left-0 w-full h-16 glass-panel z-50 flex items-center justify-between px-4 border-b border-gray-800">
+        <div class="font-bold text-xl tracking-wider text-white">W<span class="text-accent">M</span>S</div>
+        <button id="mobileMenuBtn" class="p-2 bg-gray-800 rounded text-white">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        </button>
+    </div>
+
+    <!-- Sidebar Navigation -->
+    <nav id="sidebar" class="w-64 glass-panel border-r border-gray-800 flex flex-col h-full fixed md:relative z-40 transform -translate-x-full md:translate-x-0 pt-16 md:pt-0">
+        <div class="p-6 hidden md:block">
+            <div class="font-bold text-2xl tracking-wider text-white">W<span class="text-accent">M</span>S</div>
+            <div class="text-xs text-textMuted uppercase tracking-widest mt-1">Command Center</div>
+        </div>
+        <div class="flex-1 px-4 space-y-2 mt-4 md:mt-0 overflow-y-auto">
+            <button onclick="nav('dashboard')" class="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-800 smooth-transition flex items-center gap-3"><span class="text-accent">●</span> Dashboard</button>
+            <button onclick="nav('customers')" class="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-800 smooth-transition flex items-center gap-3"><span class="text-accent">●</span> Customers</button>
+            <button onclick="nav('finances')" class="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-800 smooth-transition flex items-center gap-3"><span class="text-accent">●</span> Income & Expenses</button>
+            <button onclick="nav('reports')" class="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-800 smooth-transition flex items-center gap-3"><span class="text-accent">●</span> Reports & Analytics</button>
+            <button onclick="nav('printQueue')" class="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-800 smooth-transition flex items-center gap-3 justify-between">
+                <div class="flex items-center gap-3"><span class="text-accent">●</span> Print Queue</div>
+                <span id="queueCountBadge" class="bg-accent text-white text-xs px-2 py-1 rounded-full hidden">0</span>
+            </button>
+            <button onclick="nav('settings')" class="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-800 smooth-transition flex items-center gap-3"><span class="text-gray-500">⚙</span> Data Settings</button>
+        </div>
+    </nav>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 h-full overflow-y-auto p-4 md:p-8 pt-20 md:pt-8 relative w-full">
+        
+        <!-- Dashboard View -->
+        <div id="view-dashboard" class="view-section fade-in">
+            <div class="flex justify-between items-end mb-8">
+                <div>
+                    <h1 class="text-3xl font-bold">Operational Overview</h1>
+                    <p class="text-textMuted mt-1">Real-time business performance</p>
                 </div>
-                <button id="add-new-btn" class="add-btn" aria-label="Add new contact">
-                    <svg class="icon-md" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                </button>
             </div>
-        </header>
 
-        <div class="main-content">
-            <aside class="sidebar">
-                <ul id="contact-list" class="contact-list"></ul>
-            </aside>
-            <main id="main-content" class="content-area"></main>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
+                <div class="glass-panel p-6 rounded-xl border border-gray-800 hover:border-gray-600 smooth-transition">
+                    <div class="text-textMuted text-sm mb-2">Total Revenue</div>
+                    <div class="text-3xl font-bold text-white" id="kpiRevenue">€0.00</div>
+                </div>
+                <div class="glass-panel p-6 rounded-xl border border-gray-800 hover:border-gray-600 smooth-transition">
+                    <div class="text-textMuted text-sm mb-2">Total Costs</div>
+                    <div class="text-3xl font-bold text-red-400" id="kpiCosts">€0.00</div>
+                </div>
+                <div class="glass-panel p-6 rounded-xl border border-gray-800 hover:border-accent smooth-transition">
+                    <div class="text-textMuted text-sm mb-2">Net Profit</div>
+                    <div class="text-3xl font-bold text-green-400" id="kpiProfit">€0.00</div>
+                </div>
+                <div class="glass-panel p-6 rounded-xl border border-gray-800 hover:border-gray-600 smooth-transition">
+                    <div class="text-textMuted text-sm mb-2">Active Customers</div>
+                    <div class="text-3xl font-bold" id="kpiCustomers">0</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 glass-panel p-6 rounded-xl">
+                    <h3 class="text-lg font-semibold mb-4">Financial Overview</h3>
+                    <canvas id="mainChart" height="100"></canvas>
+                </div>
+                <div class="glass-panel p-6 rounded-xl">
+                    <h3 class="text-lg font-semibold mb-4">Quick Actions</h3>
+                    <div class="space-y-3">
+                        <button onclick="openTransactionModal()" class="w-full py-3 bg-gray-800 hover:bg-gray-700 rounded-lg text-left px-4 transition">+ Record Income / Expense</button>
+                        <button onclick="document.getElementById('customerFormModal').classList.remove('hidden')" class="w-full py-3 bg-gray-800 hover:bg-gray-700 rounded-lg text-left px-4 transition">+ Add New Customer</button>
+                        <button onclick="generateDemoData()" class="w-full py-3 bg-accent hover:bg-red-700 text-white rounded-lg text-left px-4 transition">Load Demo Data</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Finances View -->
+        <div id="view-finances" class="view-section hidden fade-in">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold">Income & Expenses</h1>
+                    <p class="text-textMuted">Track revenues, warehouse purchases, and shipping</p>
+                </div>
+                <button onclick="openTransactionModal()" class="bg-white text-black px-6 py-2 rounded-lg font-medium hover:bg-gray-200 transition">Record Transaction</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" id="expensesSummary"></div>
+            <div class="glass-panel rounded-xl overflow-hidden overflow-x-auto">
+                <table class="w-full text-left whitespace-nowrap">
+                    <thead class="bg-gray-900 border-b border-gray-800">
+                        <tr>
+                            <th class="p-4 text-textMuted font-medium">Date</th>
+                            <th class="p-4 text-textMuted font-medium">Type</th>
+                            <th class="p-4 text-textMuted font-medium">Description</th>
+                            <th class="p-4 text-textMuted font-medium">Customer</th>
+                            <th class="p-4 text-textMuted font-medium">Amount</th>
+                            <th class="p-4 text-textMuted font-medium">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="financesTableBody" class="divide-y divide-gray-800"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Reports & Analytics View -->
+        <div id="view-reports" class="view-section hidden fade-in">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold">Reports & Analytics</h1>
+                    <p class="text-textMuted">Advanced filtering by time, customer, and products/categories</p>
+                </div>
+            </div>
+
+            <!-- Filters Section -->
+            <div class="glass-panel p-6 rounded-xl border border-gray-800 mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                    
+                    <!-- Time Filter -->
+                    <div>
+                        <label class="text-xs text-textMuted block mb-1">Time Period</label>
+                        <select id="r_timePreset" onchange="handleReportTimePreset()" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white">
+                            <option value="all">All Time</option>
+                            <option value="today">Today</option>
+                            <option value="week">This Week</option>
+                            <option value="month">This Month</option>
+                            <option value="year">This Year</option>
+                            <option value="custom">Custom Range...</option>
+                        </select>
+                    </div>
+                    <div class="custom-date-group hidden">
+                        <label class="text-xs text-textMuted block mb-1">Start Date</label>
+                        <input type="date" id="r_startDate" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white">
+                    </div>
+                    <div class="custom-date-group hidden">
+                        <label class="text-xs text-textMuted block mb-1">End Date</label>
+                        <input type="date" id="r_endDate" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white">
+                    </div>
+
+                    <!-- Customer Filter -->
+                    <div>
+                        <label class="text-xs text-textMuted block mb-1">Customer Filter</label>
+                        <select id="r_customer" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white">
+                            <option value="all">All Customers</option>
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+
+                    <!-- Category / Product Filter -->
+                    <div>
+                        <label class="text-xs text-textMuted block mb-1">Category / Type</label>
+                        <select id="r_category" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white">
+                            <option value="all">All Categories</option>
+                            <option value="Order Revenue">Order Revenue</option>
+                            <option value="Goods/Inventory">Goods / Inventory</option>
+                            <option value="Shipping">Shipping Costs</option>
+                            <option value="Vehicle">Vehicle Expenses</option>
+                            <option value="General">General Expenses</option>
+                        </select>
+                    </div>
+
+                    <!-- Product/Description Text Filter -->
+                    <div>
+                        <label class="text-xs text-textMuted block mb-1">Product / Description</label>
+                        <input type="text" id="r_search" placeholder="Search item..." class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white">
+                    </div>
+
+                    <div>
+                        <button onclick="generateReport()" class="w-full bg-accent hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition">Generate</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Report KPI Summary -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" id="reportSummaryCards">
+                <div class="glass-panel p-4 rounded-xl border border-gray-800">
+                    <div class="text-sm text-textMuted mb-1">Filtered Revenue</div>
+                    <div class="text-2xl font-bold text-white" id="r_kpiRevenue">€0.00</div>
+                </div>
+                <div class="glass-panel p-4 rounded-xl border border-gray-800">
+                    <div class="text-sm text-textMuted mb-1">Filtered Costs</div>
+                    <div class="text-2xl font-bold text-red-400" id="r_kpiCosts">€0.00</div>
+                </div>
+                <div class="glass-panel p-4 rounded-xl border border-gray-800">
+                    <div class="text-sm text-textMuted mb-1">Filtered Net Profit</div>
+                    <div class="text-2xl font-bold" id="r_kpiProfit">€0.00</div>
+                </div>
+            </div>
+
+            <!-- Report Results Table -->
+            <div class="glass-panel rounded-xl overflow-hidden overflow-x-auto">
+                <table class="w-full text-left whitespace-nowrap">
+                    <thead class="bg-gray-900 border-b border-gray-800">
+                        <tr>
+                            <th class="p-4 text-textMuted font-medium">Date</th>
+                            <th class="p-4 text-textMuted font-medium">Type</th>
+                            <th class="p-4 text-textMuted font-medium">Description / Product</th>
+                            <th class="p-4 text-textMuted font-medium">Customer</th>
+                            <th class="p-4 text-textMuted font-medium">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportTableBody" class="divide-y divide-gray-800">
+                        <tr><td colspan="5" class="p-4 text-center text-textMuted">Click Generate to view data.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Customers View -->
+        <div id="view-customers" class="view-section hidden fade-in">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold">Customers Performance</h1>
+                    <p class="text-textMuted">Manage clients and view their profitability</p>
+                </div>
+                <button onclick="document.getElementById('customerFormModal').classList.remove('hidden')" class="bg-white text-black px-6 py-2 rounded-lg font-medium hover:bg-gray-200 transition">New Customer</button>
+            </div>
+            <div class="glass-panel rounded-xl overflow-hidden overflow-x-auto">
+                <table class="w-full text-left whitespace-nowrap">
+                    <thead class="bg-gray-900 border-b border-gray-800">
+                        <tr>
+                            <th class="p-4 text-textMuted font-medium">Name</th>
+                            <th class="p-4 text-textMuted font-medium">City/Country</th>
+                            <th class="p-4 text-textMuted font-medium">Total Revenue</th>
+                            <th class="p-4 text-textMuted font-medium">Shipping Costs</th>
+                            <th class="p-4 text-textMuted font-medium">Net Profit</th>
+                            <th class="p-4 text-textMuted font-medium">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customersTableBody" class="divide-y divide-gray-800"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Print Queue View -->
+        <div id="view-printQueue" class="view-section hidden fade-in">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold">Print Queue</h1>
+                    <p class="text-textMuted">Generate A4 multi-label PDFs (4 labels per page)</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="clearPrintQueue()" class="bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition">Clear Queue</button>
+                    <button onclick="generateA4Labels()" class="bg-accent text-white px-6 py-2 rounded-lg font-medium hover:bg-red-700 transition">Print Labels (A4)</button>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="printQueueContainer"></div>
+        </div>
+
+        <!-- Settings View -->
+        <div id="view-settings" class="view-section hidden fade-in">
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold">Data Management</h1>
+                <p class="text-textMuted">Backup and Restore your Local Database</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="glass-panel p-6 rounded-xl border border-gray-800">
+                    <h3 class="text-xl font-bold mb-2">Export Data</h3>
+                    <p class="text-sm text-textMuted mb-6">Download a complete JSON backup of all your customers, orders, and financial data.</p>
+                    <button onclick="exportDatabase()" class="bg-white text-black px-6 py-2 rounded-lg font-medium hover:bg-gray-200 transition w-full">Export Backup (JSON)</button>
+                </div>
+                <div class="glass-panel p-6 rounded-xl border border-gray-800 border-l-4 border-l-accent">
+                    <h3 class="text-xl font-bold mb-2">Import Data</h3>
+                    <p class="text-sm text-textMuted mb-4">Restore data from a JSON backup. <strong class="text-red-400">Warning:</strong> This will overwrite current data.</p>
+                    <input type="file" id="importFile" accept=".json" class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-gray-800 file:text-white hover:file:bg-gray-700 mb-4"/>
+                    <button onclick="importDatabase()" class="bg-accent text-white px-6 py-2 rounded-lg font-medium hover:bg-red-700 transition w-full">Restore Backup</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modals -->
+
+    <!-- Transaction Form Modal -->
+    <div id="transactionFormModal" class="hidden fixed inset-0 bg-black bg-opacity-80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="glass-panel p-6 md:p-8 rounded-xl w-full max-w-md shadow-2xl relative border border-gray-700">
+            <h2 class="text-2xl font-bold mb-6">Record Transaction</h2>
+            <form id="transactionForm" onsubmit="saveTransaction(event)">
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="text-xs text-textMuted">Type</label>
+                        <select id="t_type" onchange="handleTransactionTypeChange(true)" required class="w-full bg-gray-900 border border-gray-700 rounded p-2 mt-1 text-white">
+                            <option value="Income">Income (Revenue)</option>
+                            <option value="Expense" selected>Expense (Cost)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-textMuted">Category</label>
+                        <select id="t_category" onchange="handleTransactionTypeChange(false)" required class="w-full bg-gray-900 border border-gray-700 rounded p-2 mt-1 text-white">
+                        </select>
+                    </div>
+                </div>
+                <div id="customerSelectionGroup" class="mb-4 hidden">
+                    <label class="text-xs text-textMuted">Link to Customer <span class="text-red-400">*</span></label>
+                    <select id="t_customerId" class="w-full bg-gray-900 border border-gray-700 rounded p-2 mt-1 text-white">
+                        <option value="">-- Select Customer --</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="text-xs text-textMuted">Description / Product Name</label>
+                    <input type="text" id="t_description" placeholder="e.g. Order Payment, DHL Label, Inventory Box X..." required class="w-full bg-gray-900 border border-gray-700 rounded p-2 mt-1 text-white">
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="text-xs text-textMuted">Amount (€)</label>
+                        <input type="number" id="t_amount" step="0.01" min="0" required class="w-full bg-gray-900 border border-gray-700 rounded p-2 mt-1 text-white">
+                    </div>
+                    <div>
+                        <label class="text-xs text-textMuted">Date</label>
+                        <input type="date" id="t_date" required class="w-full bg-gray-900 border border-gray-700 rounded p-2 mt-1 text-white">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button type="button" onclick="document.getElementById('transactionFormModal').classList.add('hidden')" class="px-4 py-2 rounded text-textMuted hover:text-white transition">Cancel</button>
+                    <button type="submit" class="bg-accent text-white px-6 py-2 rounded font-medium hover:bg-red-700 transition">Save Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Customer Form Modal -->
+    <div id="customerFormModal" class="hidden fixed inset-0 bg-black bg-opacity-80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="glass-panel p-6 md:p-8 rounded-xl w-full max-w-lg shadow-2xl relative border border-gray-700">
+            <h2 class="text-2xl font-bold mb-6">Add New Customer</h2>
+            <form id="customerForm" onsubmit="saveCustomer(event)">
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div><label class="text-xs text-textMuted">First Name</label><input type="text" id="c_firstName" required class="w-full bg-gray-900 border border-gray-700 rounded p-2 mt-1 text-white"></div>
+                    <div><label class="text-xs text-textMuted">Last Name</label><input type="text" id="c_lastName" required class="w-full bg-gray-900 border border-gray-700 rounded p-2 mt-1 text-white"></div>
+                </div>
+                <div class="mb-4">
+                    <label class="text-xs text-textMuted">Street & House Number</label>
+                    <input type="text" id="c_address" required class="w-full bg-gray-900 border border-gray-700 rounded p-2 mt-1 text-white">
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div><label class="text-xs text-textMuted">Postal Code</label><input type="text" id="c_zip" required class="w-full bg-gray-900 border border-gray-700 rounded p-2 mt-1 text-white"></div>
+                    <div><label class="text-xs text-textMuted">City</label><input type="text" id="c_city" required class="w-full bg-gray-900 border border-gray-700 rounded p-2 mt-1 text-white"></div>
+                </div>
+                <div class="mb-6">
+                    <label class="text-xs text-textMuted">Country</label>
+                    <input type="text" id="c_country" required class="w-full bg-gray-900 border border-gray-700 rounded p-2 mt-1 text-white" value="Germany">
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button type="button" onclick="document.getElementById('customerFormModal').classList.add('hidden')" class="px-4 py-2 rounded text-textMuted hover:text-white transition">Cancel</button>
+                    <button type="submit" class="bg-white text-black px-6 py-2 rounded font-medium hover:bg-gray-200 transition">Save Customer</button>
+                </div>
+            </form>
         </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // --- STATE ---
-            let contacts = [];
-            let selectedContactId = null;
-            let viewMode = 'view'; // 'view', 'edit', 'add'
-            let searchTerm = '';
-
-            const initialContacts = [
-                { id: '1', firstName: 'John', lastName: 'Doe', phone: '123-456-7890', email: 'john.doe@example.com' },
-                { id: '2', firstName: 'Jane', lastName: 'Smith', phone: '234-567-8901', email: 'jane.smith@example.com' },
-                { id: '3', firstName: 'Alice', lastName: 'Johnson', phone: '345-678-9012', email: 'alice.j@example.com' },
-                { id: '4', firstName: 'Bob', lastName: 'Williams', phone: '456-789-0123', email: 'bob.w@example.com' },
-                { id: '5', firstName: 'Charlie', lastName: 'Brown', phone: '567-890-1234', email: 'charlie.b@example.com' },
-            ];
-
-            // --- DOM ELEMENTS ---
-            const contactListEl = document.getElementById('contact-list');
-            const mainContentEl = document.getElementById('main-content');
-            const searchInputEl = document.getElementById('search-input');
-            const addNewBtn = document.getElementById('add-new-btn');
-
-            // --- AVATAR HELPERS ---
-            const getInitials = (firstName = '', lastName = '') => `${firstName[0] || ''}${lastName[0] || ''}`.toUpperCase();
-            
-            const generateAvatarColor = (firstName = '', lastName = '') => {
-                const colors = ['#ef4444', '#f97316', '#eab308', '#84cc16', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef', '#f43f5e'];
-                const charCodeSum = (firstName.charCodeAt(0) || 0) + (lastName.charCodeAt(0) || 0);
-                return colors[charCodeSum % colors.length];
-            };
-
-            // --- RENDER FUNCTIONS ---
-            const renderContactList = () => {
-                contactListEl.innerHTML = ''; // Clear existing list
-                
-                const filteredContacts = contacts.filter(contact =>
-                    `${contact.firstName} ${contact.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    contact.phone.includes(searchTerm) ||
-                    contact.email.toLowerCase().includes(searchTerm.toLowerCase())
-                ).sort((a, b) => a.firstName.localeCompare(b.firstName));
-
-                if (filteredContacts.length === 0) {
-                     contactListEl.innerHTML = `<p style="text-align: center; color: var(--color-gray-500); padding: 1rem;">No contacts found.</p>`;
-                     return;
-                }
-
-                filteredContacts.forEach(contact => {
-                    const item = document.createElement('li');
-                    item.className = 'contact-list-item';
-                    item.dataset.id = contact.id;
-                    if (contact.id === selectedContactId) {
-                        item.classList.add('selected');
-                    }
-                    
-                    item.innerHTML = `
-                        <div class="avatar" style="width: 40px; height: 40px; font-size: 0.875rem; background-color: ${generateAvatarColor(contact.firstName, contact.lastName)};">
-                            <span>${getInitials(contact.firstName, contact.lastName)}</span>
-                        </div>
-                        <div class="info">
-                            <p class="name">${contact.firstName} ${contact.lastName}</p>
-                            <p class="email">${contact.email}</p>
-                        </div>
-                    `;
-                    contactListEl.appendChild(item);
-                });
-            };
-
-            const renderMainContent = () => {
-                const selectedContact = contacts.find(c => c.id === selectedContactId);
-
-                if (viewMode === 'add') {
-                    mainContentEl.innerHTML = getContactFormHTML();
-                } else if (viewMode === 'edit' && selectedContact) {
-                    mainContentEl.innerHTML = getContactFormHTML(selectedContact);
-                } else if (viewMode === 'view' && selectedContact) {
-                    mainContentEl.innerHTML = getContactDetailsHTML(selectedContact);
-                } else {
-                    mainContentEl.innerHTML = getPlaceholderHTML();
-                }
-                attachMainContentListeners();
-            };
-            
-            const getContactDetailsHTML = (contact) => {
-                return `
-                    <div class="card details-container">
-                        <div class="avatar" style="width: 128px; height: 128px; font-size: 3rem; background-color: ${generateAvatarColor(contact.firstName, contact.lastName)}; border: 4px solid var(--color-indigo-200);">
-                            <span>${getInitials(contact.firstName, contact.lastName)}</span>
-                        </div>
-                        <h2>${contact.firstName} ${contact.lastName}</h2>
-                        <div class="details-info-section">
-                            <div class="details-info-item">
-                                <svg class="icon-md" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-                                <span>${contact.phone}</span>
-                            </div>
-                            <div class="details-info-item">
-                                 <svg class="icon-md" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                                <span>${contact.email}</span>
-                            </div>
-                        </div>
-                        <div class="details-actions">
-                            <button class="btn btn-primary" id="edit-contact-btn">
-                                <svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z" /></svg>
-                                Edit
-                            </button>
-                            <button class="btn btn-danger" id="delete-contact-btn" data-id="${contact.id}">
-                                <svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                Delete
-                            </button>
-                        </div>
-                    </div>
-                `;
-            };
-
-            const getContactFormHTML = (contact = null) => {
-                 return `
-                    <div class="card">
-                        <h2 class="form-title">${contact ? 'Edit Contact' : 'Add New Contact'}</h2>
-                        <form id="contact-form" data-id="${contact ? contact.id : ''}">
-                            <div class="form-grid">
-                                <div class="form-field">
-                                    <label for="firstName">First Name</label>
-                                    <input type="text" name="firstName" id="firstName" class="form-input" required value="${contact ? contact.firstName : ''}" />
-                                </div>
-                                 <div class="form-field">
-                                    <label for="lastName">Last Name</label>
-                                    <input type="text" name="lastName" id="lastName" class="form-input" required value="${contact ? contact.lastName : ''}" />
-                                </div>
-                            </div>
-                            <div class="form-field">
-                                <label for="phone">Phone Number</label>
-                                <input type="tel" name="phone" id="phone" class="form-input" required value="${contact ? contact.phone : ''}" />
-                            </div>
-                            <div class="form-field">
-                                <label for="email">Email Address</label>
-                                <input type="email" name="email" id="email" class="form-input" required value="${contact ? contact.email : ''}" />
-                            </div>
-                            <div class="form-actions">
-                                <button type="button" class="btn btn-secondary" id="cancel-form-btn">Cancel</button>
-                                <button type="submit" class="btn btn-primary">Save Contact</button>
-                            </div>
-                        </form>
-                    </div>
-                 `;
-            };
-            
-            const getPlaceholderHTML = () => {
-                return `
-                    <div class="placeholder">
-                         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21v-1a6 6 0 00-5.176-5.97m5.176 5.97h3.428a2.25 2.25 0 002.12-3.242" />
-                        </svg>
-                        <h2>No Contact Selected</h2>
-                        <p>Select a contact from the list to see their details.</p>
-                        <button class="btn btn-primary" id="placeholder-add-btn">
-                             <svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-                            Add New Contact
-                        </button>
-                    </div>
-                `;
-            };
-
-            const render = () => {
-                renderContactList();
-                renderMainContent();
-            };
-
-            // --- EVENT HANDLERS ---
-            const handleSelectContact = (e) => {
-                const target = e.target.closest('.contact-list-item');
-                if (target) {
-                    selectedContactId = target.dataset.id;
-                    viewMode = 'view';
-                    render();
-                }
-            };
-
-            const handleSearch = (e) => {
-                searchTerm = e.target.value;
-                renderContactList();
-            };
-            
-            const handleAddNew = () => {
-                selectedContactId = null;
-                viewMode = 'add';
-                render();
-            };
-
-            const handleEdit = () => {
-                viewMode = 'edit';
-                render();
-            };
-            
-            const handleDelete = (e) => {
-                const contactId = e.target.closest('button').dataset.id;
-                const contactToDelete = contacts.find(c => c.id === contactId);
-                if (window.confirm(`Are you sure you want to delete ${contactToDelete.firstName} ${contactToDelete.lastName}?`)) {
-                    contacts = contacts.filter(c => c.id !== contactId);
-                    if (selectedContactId === contactId) {
-                        selectedContactId = contacts.length > 0 ? contacts[0].id : null;
-                        viewMode = 'view';
-                    }
-                    render();
-                }
-            };
-            
-            const handleCancelForm = () => {
-                if(contacts.find(c => c.id === selectedContactId)) {
-                    viewMode = 'view';
-                } else {
-                    selectedContactId = contacts.length > 0 ? contacts[0].id : null;
-                    viewMode = 'view';
-                }
-                render();
-            };
-
-            const handleSaveContact = (e) => {
-                e.preventDefault();
-                const form = e.target;
-                const contactId = form.dataset.id;
-                const formData = new FormData(form);
-                const contactData = {
-                    firstName: formData.get('firstName'),
-                    lastName: formData.get('lastName'),
-                    phone: formData.get('phone'),
-                    email: formData.get('email'),
-                };
-                
-                if (contactId) { // Editing
-                    contacts = contacts.map(c => c.id === contactId ? { ...c, ...contactData } : c);
-                } else { // Adding
-                    const newContact = { ...contactData, id: Date.now().toString() };
-                    contacts.push(newContact);
-                    selectedContactId = newContact.id;
-                }
-                viewMode = 'view';
-                render();
-            };
-
-            // --- ATTACH LISTENERS ---
-            function attachMainContentListeners() {
-                const editBtn = document.getElementById('edit-contact-btn');
-                if(editBtn) editBtn.addEventListener('click', handleEdit);
-                
-                const deleteBtn = document.getElementById('delete-contact-btn');
-                if(deleteBtn) deleteBtn.addEventListener('click', handleDelete);
-                
-                const contactForm = document.getElementById('contact-form');
-                if(contactForm) contactForm.addEventListener('submit', handleSaveContact);
-                
-                const cancelBtn = document.getElementById('cancel-form-btn');
-                if(cancelBtn) cancelBtn.addEventListener('click', handleCancelForm);
-
-                const placeholderAddBtn = document.getElementById('placeholder-add-btn');
-                if(placeholderAddBtn) placeholderAddBtn.addEventListener('click', handleAddNew);
-            }
-            
-            contactListEl.addEventListener('click', handleSelectContact);
-            searchInputEl.addEventListener('input', handleSearch);
-            addNewBtn.addEventListener('click', handleAddNew);
-            
-            // --- INITIALIZATION ---
-            function init() {
-                contacts = [...initialContacts];
-                if (contacts.length > 0) {
-                    selectedContactId = contacts[0].id;
-                }
-                render();
-            }
-
-            init();
+        // --- 1. DB Initialization ---
+        const db = new Dexie("WMS_Database");
+        db.version(2).stores({
+            customers: '++id, firstName, lastName, city',
+            orders: '++id, customerId, date, revenue', 
+            finances: '++id, type, category, amount, date, customerId'
         });
-    </script>
 
-<script type="module" src="/index.tsx"></script>
+        let printQueue = [];
+        let chartInstance = null;
+        let customerCache = {}; 
+
+        // --- 2. UI Navigation & Dynamic Forms ---
+        document.getElementById('mobileMenuBtn').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.toggle('sidebar-open');
+        });
+
+        function nav(viewId) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`view-${viewId}`).classList.remove('hidden');
+            if(window.innerWidth < 768) { document.getElementById('sidebar').classList.remove('sidebar-open'); }
+            
+            if (viewId === 'dashboard') loadDashboard();
+            if (viewId === 'customers') loadCustomers();
+            if (viewId === 'finances') loadFinances();
+            if (viewId === 'reports') loadReportsInit();
+            if (viewId === 'printQueue') renderPrintQueue();
+        }
+
+        async function updateCustomerCache() {
+            const customers = await db.customers.toArray();
+            customerCache = {};
+            customers.forEach(c => customerCache[c.id] = `${c.firstName} ${c.lastName}`);
+        }
+
+        async function openTransactionModal() {
+            document.getElementById('t_date').valueAsDate = new Date();
+            const customers = await db.customers.toArray();
+            const select = document.getElementById('t_customerId');
+            select.innerHTML = '<option value="">-- Select Customer --</option>';
+            customers.forEach(c => select.innerHTML += `<option value="${c.id}">${c.firstName} ${c.lastName}</option>`);
+            handleTransactionTypeChange(true);
+            document.getElementById('transactionFormModal').classList.remove('hidden');
+        }
+
+        function handleTransactionTypeChange(rebuildCategories = false) {
+            const type = document.getElementById('t_type').value;
+            const categorySelect = document.getElementById('t_category');
+            const customerGroup = document.getElementById('customerSelectionGroup');
+            const customerSelect = document.getElementById('t_customerId');
+
+            if (rebuildCategories) {
+                categorySelect.innerHTML = '';
+                if (type === 'Income') {
+                    categorySelect.innerHTML += `<option value="Order Revenue">Order Revenue</option>`;
+                    categorySelect.innerHTML += `<option value="Other Income">Other Income</option>`;
+                } else {
+                    categorySelect.innerHTML += `<option value="Shipping">Shipping Cost</option>`;
+                    categorySelect.innerHTML += `<option value="Goods/Inventory">Goods / Inventory</option>`;
+                    categorySelect.innerHTML += `<option value="Vehicle">Vehicle Expense</option>`;
+                    categorySelect.innerHTML += `<option value="General">General Expense</option>`;
+                }
+            }
+            const currentCat = categorySelect.value;
+            if (type === 'Income' || (type === 'Expense' && currentCat === 'Shipping')) {
+                customerGroup.classList.remove('hidden');
+                if (currentCat === 'Order Revenue' || currentCat === 'Shipping') {
+                    customerSelect.setAttribute('required', 'true');
+                } else {
+                    customerSelect.removeAttribute('required');
+                }
+            } else {
+                customerGroup.classList.add('hidden');
+                customerSelect.removeAttribute('required');
+                customerSelect.value = '';
+            }
+        }
+
+        // --- 3. Dashboard Calculation Engine ---
+        async function calculateFinancials() {
+            const finances = await db.finances.toArray();
+            let totalRevenue = 0; let totalCosts = 0; 
+            finances.forEach(f => {
+                const amt = parseFloat(f.amount);
+                if (f.type === 'Income') totalRevenue += amt;
+                else totalCosts += amt;
+            });
+            const netProfit = totalRevenue - totalCosts;
+            return { totalRevenue, totalCosts, netProfit };
+        }
+
+        async function loadDashboard() {
+            const customersCount = await db.customers.count();
+            document.getElementById('kpiCustomers').innerText = customersCount;
+            const stats = await calculateFinancials();
+
+            document.getElementById('kpiRevenue').innerText = `€${stats.totalRevenue.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            document.getElementById('kpiCosts').innerText = `€${stats.totalCosts.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            
+            const profitEl = document.getElementById('kpiProfit');
+            profitEl.innerText = `€${stats.netProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            profitEl.className = stats.netProfit >= 0 ? "text-3xl font-bold text-green-400" : "text-3xl font-bold text-red-500";
+
+            updateChart(stats);
+        }
+
+        function updateChart(stats) {
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            if(chartInstance) chartInstance.destroy();
+            const revSpread = [stats.totalRevenue * 0.1, stats.totalRevenue * 0.2, stats.totalRevenue * 0.15, stats.totalRevenue * 0.25, stats.totalRevenue * 0.3];
+            const costSpread = [stats.totalCosts * 0.1, stats.totalCosts * 0.2, stats.totalCosts * 0.15, stats.totalCosts * 0.25, stats.totalCosts * 0.3];
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
+                    datasets: [
+                        { label: 'Revenue', data: revSpread, borderColor: '#f1f5f9', backgroundColor: 'rgba(241, 245, 249, 0.1)', fill: true, tension: 0.4 }, 
+                        { label: 'Costs', data: costSpread, borderColor: '#e63946', backgroundColor: 'rgba(230, 57, 70, 0.1)', fill: true, tension: 0.4 }
+                    ]
+                },
+                options: { responsive: true, plugins: { legend: { labels: { color: '#94a3b8' } } }, scales: { y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }, x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } } } }
+            });
+        }
+
+        // --- 4. Reports & Analytics Logic ---
+        async function loadReportsInit() {
+            await updateCustomerCache();
+            const select = document.getElementById('r_customer');
+            select.innerHTML = '<option value="all">All Customers</option>';
+            Object.keys(customerCache).forEach(id => {
+                select.innerHTML += `<option value="${id}">${customerCache[id]}</option>`;
+            });
+            // Initial blank state or generate default all
+            generateReport();
+        }
+
+        function handleReportTimePreset() {
+            const preset = document.getElementById('r_timePreset').value;
+            const groups = document.querySelectorAll('.custom-date-group');
+            if (preset === 'custom') {
+                groups.forEach(g => g.classList.remove('hidden'));
+            } else {
+                groups.forEach(g => g.classList.add('hidden'));
+            }
+        }
+
+        function isDateInRange(dateStr, preset, customStart, customEnd) {
+            const d = new Date(dateStr);
+            const today = new Date();
+            
+            if (preset === 'all') return true;
+            if (preset === 'today') {
+                return d.toDateString() === today.toDateString();
+            }
+            if (preset === 'week') {
+                const firstDay = new Date(today.setDate(today.getDate() - today.getDay()));
+                return d >= firstDay;
+            }
+            if (preset === 'month') {
+                return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+            }
+            if (preset === 'year') {
+                return d.getFullYear() === today.getFullYear();
+            }
+            if (preset === 'custom') {
+                const s = new Date(customStart);
+                const e = new Date(customEnd);
+                if (customStart && d < s) return false;
+                if (customEnd && d > e) return false;
+                return true;
+            }
+            return true;
+        }
+
+        async function generateReport() {
+            const timePreset = document.getElementById('r_timePreset').value;
+            const startDate = document.getElementById('r_startDate').value;
+            const endDate = document.getElementById('r_endDate').value;
+            const customerId = document.getElementById('r_customer').value;
+            const category = document.getElementById('r_category').value;
+            const searchTxt = document.getElementById('r_search').value.toLowerCase();
+
+            const allFinances = await db.finances.orderBy('date').reverse().toArray();
+            let fRev = 0; let fCost = 0;
+
+            const filteredData = allFinances.filter(f => {
+                // 1. Time Filter
+                if (!isDateInRange(f.date, timePreset, startDate, endDate)) return false;
+                // 2. Customer Filter
+                if (customerId !== 'all' && f.customerId != customerId) return false;
+                // 3. Category Filter
+                if (category !== 'all' && f.category !== category) return false;
+                // 4. Product/Description Search
+                if (searchTxt && !f.description.toLowerCase().includes(searchTxt)) return false;
+                return true;
+            });
+
+            const tbody = document.getElementById('reportTableBody');
+            tbody.innerHTML = '';
+
+            if (filteredData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-textMuted">No records match the selected filters.</td></tr>`;
+                document.getElementById('r_kpiRevenue').innerText = `€0.00`;
+                document.getElementById('r_kpiCosts').innerText = `€0.00`;
+                document.getElementById('r_kpiProfit').innerText = `€0.00`;
+                document.getElementById('r_kpiProfit').className = "text-2xl font-bold";
+                return;
+            }
+
+            filteredData.forEach(f => {
+                const amt = parseFloat(f.amount);
+                if (f.type === 'Income') fRev += amt; else fCost += amt;
+
+                let typeBadge = f.type === 'Income' ? `<span class="px-2 py-1 rounded text-xs bg-green-900 text-green-200">${f.category}</span>` : `<span class="px-2 py-1 rounded text-xs bg-red-900 text-red-200">${f.category}</span>`;
+                let amtColor = f.type === 'Income' ? 'text-green-400' : 'text-red-400';
+                let sign = f.type === 'Income' ? '+' : '-';
+                let cName = f.customerId && customerCache[f.customerId] ? customerCache[f.customerId] : '-';
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-800 transition">
+                        <td class="p-4 text-sm text-textMuted">${f.date}</td>
+                        <td class="p-4">${typeBadge}</td>
+                        <td class="p-4 font-medium">${f.description}</td>
+                        <td class="p-4 text-sm text-gray-400">${cName}</td>
+                        <td class="p-4 font-bold ${amtColor}">${sign}€${amt.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                    </tr>
+                `;
+            });
+
+            // Update Summary
+            const net = fRev - fCost;
+            document.getElementById('r_kpiRevenue').innerText = `€${fRev.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            document.getElementById('r_kpiCosts').innerText = `€${fCost.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            
+            const pEl = document.getElementById('r_kpiProfit');
+            pEl.innerText = `€${net.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            pEl.className = net >= 0 ? "text-2xl font-bold text-green-400" : "text-2xl font-bold text-red-500";
+        }
+
+        // --- 5. Transactions Logic ---
+        async function saveTransaction(e) {
+            e.preventDefault();
+            const customerGroup = document.getElementById('customerSelectionGroup');
+            let customerId = null;
+            if (!customerGroup.classList.contains('hidden')) {
+                const val = document.getElementById('t_customerId').value;
+                if(val) customerId = parseInt(val);
+            }
+            
+            const transaction = {
+                type: document.getElementById('t_type').value, category: document.getElementById('t_category').value,
+                description: document.getElementById('t_description').value, amount: parseFloat(document.getElementById('t_amount').value),
+                date: document.getElementById('t_date').value, customerId: customerId, timestamp: new Date().getTime()
+            };
+            
+            await db.finances.add(transaction);
+            document.getElementById('transactionForm').reset();
+            document.getElementById('transactionFormModal').classList.add('hidden');
+            
+            if(!document.getElementById('view-finances').classList.contains('hidden')) loadFinances();
+            if(!document.getElementById('view-reports').classList.contains('hidden')) generateReport();
+            loadDashboard(); 
+        }
+
+        async function loadFinances() {
+            await updateCustomerCache();
+            const finances = await db.finances.orderBy('date').reverse().toArray();
+            const tbody = document.getElementById('financesTableBody');
+            tbody.innerHTML = '';
+            
+            if(finances.length === 0) { tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-textMuted">No records found.</td></tr>`; return; }
+
+            finances.forEach(f => {
+                let typeBadge = f.type === 'Income' ? `<span class="px-2 py-1 rounded text-xs bg-green-900 text-green-200">${f.type}</span>` : `<span class="px-2 py-1 rounded text-xs bg-red-900 text-red-200">${f.type}</span>`;
+                let amtColor = f.type === 'Income' ? 'text-green-400' : 'text-red-400';
+                let cName = f.customerId && customerCache[f.customerId] ? customerCache[f.customerId] : '-';
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-800 transition">
+                        <td class="p-4 text-textMuted">${f.date}</td>
+                        <td class="p-4">${typeBadge} <span class="text-xs text-gray-500 ml-1">(${f.category})</span></td>
+                        <td class="p-4 font-medium">${f.description}</td>
+                        <td class="p-4 text-sm text-gray-400">${cName}</td>
+                        <td class="p-4 font-bold ${amtColor}">€${parseFloat(f.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                        <td class="p-4"><button onclick="db.finances.delete(${f.id}).then(()=>{loadFinances();loadDashboard();})" class="text-red-500 hover:text-red-300 text-sm">Delete</button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        // --- 6. Customers ---
+        async function loadCustomers() {
+            const customers = await db.customers.toArray();
+            const finances = await db.finances.toArray();
+            const tbody = document.getElementById('customersTableBody');
+            tbody.innerHTML = '';
+
+            customers.forEach(c => {
+                let cRev = 0; let cShip = 0;
+                finances.filter(f => f.customerId === c.id).forEach(f => {
+                    if (f.type === 'Income') cRev += parseFloat(f.amount);
+                    if (f.type === 'Expense' && f.category === 'Shipping') cShip += parseFloat(f.amount);
+                });
+                let cProfit = cRev - cShip;
+                let profitColor = cProfit >= 0 ? 'text-green-400' : 'text-red-400';
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-800 transition">
+                        <td class="p-4 font-medium"><div class="font-bold">${c.firstName} ${c.lastName}</div><div class="text-xs text-textMuted">ID: #${c.id}</div></td>
+                        <td class="p-4 text-sm">${c.city}, ${c.country}</td>
+                        <td class="p-4 text-white">€${cRev.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                        <td class="p-4 text-red-400">€${cShip.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                        <td class="p-4 font-bold ${profitColor}">€${cProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                        <td class="p-4"><button onclick='queueCustomerForPrint(${JSON.stringify(c)})' class="bg-gray-700 hover:bg-accent text-white px-3 py-1 rounded text-xs transition">+ Print Queue</button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function saveCustomer(e) {
+            e.preventDefault();
+            await db.customers.add({
+                firstName: document.getElementById('c_firstName').value, lastName: document.getElementById('c_lastName').value,
+                address: document.getElementById('c_address').value, postalCode: document.getElementById('c_zip').value,
+                city: document.getElementById('c_city').value, country: document.getElementById('c_country').value,
+                created: new Date().getTime()
+            });
+            document.getElementById('customerForm').reset();
+            document.getElementById('customerFormModal').classList.add('hidden');
+            if(!document.getElementById('view-customers').classList.contains('hidden')) loadCustomers();
+        }
+
+        // --- 7. Print Queue ---
+        function queueCustomerForPrint(c) { printQueue.push(c); document.getElementById('queueCountBadge').innerText = printQueue.length; document.getElementById('queueCountBadge').style.display = 'inline-block'; }
+        function clearPrintQueue() { printQueue = []; document.getElementById('queueCountBadge').style.display = 'none'; renderPrintQueue(); }
+        function renderPrintQueue() {
+            const cont = document.getElementById('printQueueContainer'); cont.innerHTML = '';
+            if (!printQueue.length) { cont.innerHTML = '<div class="text-textMuted col-span-full">Queue is empty.</div>'; return; }
+            printQueue.forEach((c, i) => {
+                cont.innerHTML += `<div class="glass-panel p-4 rounded border border-gray-700 relative">
+                    <button onclick="printQueue.splice(${i}, 1); renderPrintQueue(); document.getElementById('queueCountBadge').innerText = printQueue.length;" class="absolute top-2 right-2 text-red-500">✕</button>
+                    <div class="text-xs text-textMuted mb-2">Label #${i + 1}</div>
+                    <div class="font-bold">${c.firstName} ${c.lastName}</div>
+                    <div class="text-sm text-gray-400">${c.address}<br>${c.postalCode} ${c.city}<br>${c.country}</div>
+                </div>`;
+            });
+        }
+        function generateA4Labels() {
+            if (!printQueue.length) return alert("Queue empty!");
+            const doc = new window.jspdf.jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+            const pos = [{x:0,y:0},{x:105,y:0},{x:0,y:148.5},{x:105,y:148.5}];
+            printQueue.forEach((c, i) => {
+                if (i%4 === 0 && i>0) doc.addPage();
+                let bx = pos[i%4].x, by = pos[i%4].y;
+                doc.setDrawColor(200, 200, 200); doc.rect(bx, by, 105, 148.5);
+                doc.setFontSize(8); doc.setTextColor(100, 100, 100); doc.text("Bakkour, Fabrikstr. 21E, 07629 Reichenbach", bx + 10, by + 15);
+                doc.setFontSize(12); doc.setTextColor(0, 0, 0);
+                doc.text(`${c.firstName} ${c.lastName}`, bx + 15, by + 45); doc.text(c.address, bx + 15, by + 52); doc.text(`${c.postalCode} ${c.city}`, bx + 15, by + 59); doc.text(c.country, bx + 15, by + 66);
+            });
+            doc.save(`Labels_${new Date().getTime()}.pdf`);
+        }
+
+        // --- 8. Backup / Demo Data ---
+        async function exportDatabase() {
+            const data = { customers: await db.customers.toArray(), finances: await db.finances.toArray() };
+            const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+            const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `WMS_Backup.json`; a.click();
+        }
+        function importDatabase() {
+            const file = document.getElementById('importFile').files[0];
+            if (!file) return alert("Select JSON file.");
+            if (!confirm("Overwrite current data?")) return;
+            const r = new FileReader();
+            r.onload = async (e) => {
+                const d = JSON.parse(e.target.result);
+                await db.customers.clear(); await db.finances.clear();
+                if(d.customers) await db.customers.bulkAdd(d.customers); if(d.finances) await db.finances.bulkAdd(d.finances);
+                alert("Restored!"); location.reload();
+            };
+            r.readAsText(file);
+        }
+        async function generateDemoData() {
+            const today = new Date().toISOString().split('T')[0];
+            const id1 = await db.customers.add({ firstName: "Marcus", lastName: "Schmidt", address: "Hauptstr. 12", postalCode: "10115", city: "Berlin", country: "Germany" });
+            await db.finances.bulkAdd([
+                { type: "Income", category: "Order Revenue", description: "Payment for Shoes", amount: 150.00, date: today, customerId: id1, timestamp: Date.now() },
+                { type: "Expense", category: "Shipping", description: "DHL Premium", amount: 14.50, date: today, customerId: id1, timestamp: Date.now() },
+                { type: "Expense", category: "Goods/Inventory", description: "Nike Shoes Restock", amount: 65.00, date: today, customerId: null, timestamp: Date.now() },
+            ]);
+            loadDashboard(); alert("Demo data loaded!");
+        }
+
+        window.onload = () => loadDashboard();
+    </script>
 </body>
 </html>
+
